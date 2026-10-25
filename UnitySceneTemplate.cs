@@ -295,6 +295,17 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         {
             var path = folder + ""/"" + entry.file;
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer != null && (importer.filterMode != FilterMode.Point ||
+                importer.mipmapEnabled ||
+                importer.textureCompression != TextureImporterCompression.Uncompressed))
+            {
+                importer.filterMode = FilterMode.Point;
+                importer.mipmapEnabled = false;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.SaveAndReimport();
+            }
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             if (texture != null && material.HasProperty(entry.name))
             {
