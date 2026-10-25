@@ -12,8 +12,12 @@ namespace Landoria.ModelForge
         private readonly ManualLogSource _log;
         private readonly List<GameObject> _placed = new List<GameObject>();
         private GameObject _preview;
+        private GameObject _target;
         private float _angle;
         internal string Folder { get; }
+        internal string TargetName => _target != null ? SafeName(_target.name) : "No model under cursor";
+        internal bool HasTarget => _target != null;
+        internal bool CanEraseTarget => _target != null && _placed.Contains(_target);
 
         // Stores the local working folder and logger.
         internal ForgeSession(string folder, ManualLogSource log)
@@ -22,21 +26,28 @@ namespace Landoria.ModelForge
             _log = log;
         }
 
-        // Exports the static visual hierarchy under the cursor.
+        // Captures the object aimed at when the dialog opens.
+        internal void CaptureTarget()
+        {
+            _target = null;
+            if (!TryHit(out var hit)) { return; }
+            var view = hit.collider.GetComponentInParent<ZNetView>();
+            _target = view != null ? view.gameObject : hit.collider.gameObject;
+        }
+
+        // Exports the captured static visual hierarchy.
         internal string ExportTarget()
         {
-            if (!TryHit(out var hit))
+            if (_target == null)
             {
-                throw new InvalidOperationException("Aim at an object first.");
+                throw new InvalidOperationException("No model was under the cursor when the dialog opened.");
             }
-            var view = hit.collider.GetComponentInParent<ZNetView>();
-            var root = view != null ? view.gameObject : hit.collider.gameObject;
-            var name = SafeName(root.name);
+            var name = SafeName(_target.name);
             var path = UniquePath(name);
-            GlbWriter.Write(root, path);
+            GlbWriter.Write(_target, path);
             try
             {
-                PreviewCapture.Write(root, Path.ChangeExtension(path, ".jpg"));
+                PreviewCapture.Write(_target, Path.ChangeExtension(path, ".jpg"));
             }
             catch (Exception error)
             {
@@ -84,19 +95,15 @@ namespace Landoria.ModelForge
             }
         }
 
-        // Deletes only a previously placed ModelForge object.
+        // Deletes only the imported model captured when the dialog opened.
         internal string EraseTarget()
         {
-            if (!TryHit(out var hit))
+            if (_target == null || !_placed.Remove(_target))
             {
-                return "No imported model under cursor.";
+                return "No imported model was selected when the dialog opened.";
             }
-            var target = hit.collider.gameObject;
-            if (!_placed.Remove(target))
-            {
-                return "No imported model under cursor.";
-            }
-            UnityEngine.Object.Destroy(target);
+            UnityEngine.Object.Destroy(_target);
+            _target = null;
             return "Imported model erased.";
         }
 
@@ -165,6 +172,7 @@ namespace Landoria.ModelForge
         public void Dispose()
         {
             CancelPlacement();
+            _target = null;
             foreach (var model in _placed)
             {
                 if (model != null) { UnityEngine.Object.Destroy(model); }

@@ -16,8 +16,11 @@ namespace Landoria.ModelForge
         private ForgeDropdown _dropdown;
         private GameObject _root;
         private TMP_Text _status;
+        private TMP_Text _targetName;
         private TMP_Text _selection;
+        private Button _export;
         private Button _import;
+        private Button _erase;
         private CursorLockMode _previousLock;
         private bool _previousVisible;
         private string[] _files = Array.Empty<string>();
@@ -36,6 +39,7 @@ namespace Landoria.ModelForge
         {
             if (IsOpen) { Close(); return; }
             if (!EnsureCreated()) { return; }
+            _session.CaptureTarget();
             _previousLock = Cursor.lockState;
             _previousVisible = Cursor.visible;
             Refresh();
@@ -92,13 +96,13 @@ namespace Landoria.ModelForge
         private void BuildContents(RectTransform panel)
         {
             _ui.Label(panel, "ModelForge", 0, -28, 480, 46, 30, TextAlignmentOptions.Center);
-            _ui.Label(panel, "BepInEx/config/ModelForge/Models", 0, -78, 520, 28, 18, TextAlignmentOptions.Center);
-            _ui.Button(panel, "Export object under cursor + JPEG", -132, Export);
+            _targetName = _ui.Label(panel, "", 0, -78, 520, 28, 18, TextAlignmentOptions.Center);
+            _export = _ui.Button(panel, "Export selected model + JPEG", -132, Export);
             _selection = _ui.Label(panel, "No GLB files", 0, -188, 440, 36, 20, TextAlignmentOptions.Center);
             _ui.Button(panel, "Choose model", -230, ToggleDropdown);
             _dropdown = new ForgeDropdown(_ui, panel, -267, SelectModel);
             _import = _ui.Button(panel, "Import selected model", -429, Import);
-            _ui.Button(panel, "Erase imported model under cursor", -477, Erase);
+            _erase = _ui.Button(panel, "Erase selected imported model", -477, Erase);
             _ui.Button(panel, "Close", -525, Close);
             _status = _ui.Label(panel, "", 0, -565, 520, 44, 17, TextAlignmentOptions.Center);
         }
@@ -109,6 +113,9 @@ namespace Landoria.ModelForge
             _files = Directory.GetFiles(_session.Folder, "*.glb");
             Array.Sort(_files, StringComparer.OrdinalIgnoreCase);
             _selected = Mathf.Clamp(_selected, 0, Math.Max(0, _files.Length - 1));
+            _targetName.text = "Target: " + _session.TargetName;
+            _export.interactable = _session.HasTarget;
+            _erase.interactable = _session.CanEraseTarget;
             _selection.text = _files.Length == 0 ? "No GLB files" : Path.GetFileName(_files[_selected]);
             _import.interactable = _files.Length > 0;
             _dropdown.SetFiles(_files);
@@ -129,7 +136,7 @@ namespace Landoria.ModelForge
             _dropdown.Hide();
         }
 
-        // Exports the object currently under the crosshair.
+        // Exports the object captured when the dialog opened.
         private void Export()
         {
             Run(_session.ExportTarget);
