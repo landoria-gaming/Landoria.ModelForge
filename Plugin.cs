@@ -23,7 +23,7 @@ namespace Landoria.ModelForge
             var folder = Path.Combine(Paths.ConfigPath, "ModelForge", "Models");
             Directory.CreateDirectory(folder);
             _session = new ForgeSession(folder, Logger);
-            _window = new ForgeWindow(_session);
+            _window = new ForgeWindow(_session, Logger);
             Preference.Initialize(Config);
             ConfigWatcher.Initialize(Config, Logger, "ModelForge", () => Preference.RestoreDefaults(Config));
             Logger.LogInfo($"{PluginName} {PluginVersion} is loaded. Models: {folder}");
@@ -42,20 +42,14 @@ namespace Landoria.ModelForge
                 _window.Toggle();
             }
             _window.UpdateCursor();
-            _session.UpdatePlacement();
-        }
-
-        // Draws the local tool window.
-        private void OnGUI()
-        {
-            _window?.Draw();
+            if (!_window.IsOpen) { _session.UpdatePlacement(); }
         }
 
         // Removes temporary models when the plugin unloads.
         private void OnDestroy()
         {
             ConfigWatcher.Dispose();
-            _window?.Close();
+            _window?.Dispose();
             _session?.Dispose();
             _window = null;
             _session = null;

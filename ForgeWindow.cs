@@ -1,152 +1,167 @@
 using System;
 using System.IO;
+using BepInEx.Logging;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Landoria.ModelForge
 {
-    // Draws a small export, import, and erase dialog.
+    // Controls a Valheim-styled Unity UI dialog for local model actions.
     internal sealed class ForgeWindow
     {
         private readonly ForgeSession _session;
-        private Rect _rect = new Rect(30, 80, 380, 330);
-        private Vector2 _scroll;
+        private readonly ManualLogSource _log;
+        private ForgeUiFactory _ui;
+        private ForgeDropdown _dropdown;
+        private GameObject _root;
+        private TMP_Text _status;
+        private TMP_Text _selection;
+        private Button _import;
         private CursorLockMode _previousLock;
         private bool _previousVisible;
         private string[] _files = Array.Empty<string>();
         private int _selected;
-        private bool _open;
-        private bool _listOpen;
-        private string _message = "";
+        internal bool IsOpen => _root != null && _root.activeSelf;
 
-        // Stores the active session.
-        internal ForgeWindow(ForgeSession session)
+        // Stores the model session and logger.
+        internal ForgeWindow(ForgeSession session, ManualLogSource log)
         {
             _session = session;
+            _log = log;
         }
 
-        // Toggles the dialog and refreshes its model list.
+        // Opens or closes the dialog with the configured shortcut.
         internal void Toggle()
         {
-            if (!_open)
-            {
-                _previousLock = Cursor.lockState;
-                _previousVisible = Cursor.visible;
-            }
-            _open = !_open;
-            if (!_open) { RestoreCursor(); }
-            _listOpen = false;
+            if (IsOpen) { Close(); return; }
+            if (!EnsureCreated()) { return; }
+            _previousLock = Cursor.lockState;
+            _previousVisible = Cursor.visible;
             Refresh();
+            _root.SetActive(true);
+            UpdateCursor();
         }
 
-        // Closes the dialog when the plugin unloads.
+        // Hides the dialog and restores the previous cursor state.
         internal void Close()
         {
-            if (_open)
-            {
-                _open = false;
-                RestoreCursor();
-            }
-        }
-
-        // Keeps the mouse available while the game dialog is open.
-        internal void UpdateCursor()
-        {
-            if (_open)
-            {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-            }
-        }
-
-        // Restores the cursor state that preceded the dialog.
-        private void RestoreCursor()
-        {
+            if (!IsOpen) { return; }
+            _root.SetActive(false);
+            _dropdown.Hide();
             Cursor.lockState = _previousLock;
             Cursor.visible = _previousVisible;
         }
 
-        // Finds importable GLB files in the working folder.
+        // Keeps UI input separate from Valheim's mouse controls.
+        internal void UpdateCursor()
+        {
+            if (!IsOpen) { return; }
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            ZInput.IgnoreMouseInputForFrames(2);
+            if (Input.GetKeyDown(KeyCode.Escape)) { Close(); }
+        }
+
+        // Removes the temporary Unity UI objects on plugin shutdown.
+        internal void Dispose()
+        {
+            Close();
+            if (_root != null) { UnityEngine.Object.Destroy(_root); }
+            _root = null;
+        }
+
+        // Builds the dialog after Valheim has created its own UI.
+        private bool EnsureCreated()
+        {
+            if (_root != null) { return true; }
+            var sample = Menu.instance?.m_continueButton ?? InventoryGui.instance?.m_craftButton;
+            if (sample == null)
+            {
+                _log.LogWarning("ModelForge could not find a Valheim button style yet.");
+                return false;
+            }
+            _ui = new ForgeUiFactory(sample, Menu.instance?.m_menuDialog);
+            _root = _ui.CreateCanvas(out var panel);
+            BuildContents(panel);
+            _root.SetActive(false);
+            return true;
+        }
+
+        // Adds the Valheim-styled labels, buttons, and file list.
+        private void BuildContents(RectTransform panel)
+        {
+            _ui.Label(panel, "ModelForge", 0, -28, 480, 46, 30, TextAlignmentOptions.Center);
+            _ui.Label(panel, "BepInEx/config/ModelForge/Models", 0, -78, 520, 28, 18, TextAlignmentOptions.Center);
+            _ui.Button(panel, "Export object under cursor + JPEG", -132, Export);
+            _selection = _ui.Label(panel, "No GLB files", 0, -188, 440, 36, 20, TextAlignmentOptions.Center);
+            _ui.Button(panel, "Choose model", -230, ToggleDropdown);
+            _dropdown = new ForgeDropdown(_ui, panel, -267, SelectModel);
+            _import = _ui.Button(panel, "Import selected model", -429, Import);
+            _ui.Button(panel, "Erase imported model under cursor", -477, Erase);
+            _ui.Button(panel, "Close", -525, Close);
+            _status = _ui.Label(panel, "", 0, -565, 520, 44, 17, TextAlignmentOptions.Center);
+        }
+
+        // Updates the selector after a file is created or removed.
         private void Refresh()
         {
             _files = Directory.GetFiles(_session.Folder, "*.glb");
             Array.Sort(_files, StringComparer.OrdinalIgnoreCase);
             _selected = Mathf.Clamp(_selected, 0, Math.Max(0, _files.Length - 1));
+            _selection.text = _files.Length == 0 ? "No GLB files" : Path.GetFileName(_files[_selected]);
+            _import.interactable = _files.Length > 0;
+            _dropdown.SetFiles(_files);
         }
 
-        // Draws the dialog only while it is open.
-        internal void Draw()
+        // Shows or hides the scrollable model choices.
+        private void ToggleDropdown()
         {
-            if (_open)
-            {
-                _rect = GUI.Window(78431, _rect, DrawContents, "ModelForge");
-            }
+            Refresh();
+            _dropdown.Toggle();
         }
 
-        // Draws the actions and the import dropdown.
-        private void DrawContents(int id)
+        // Saves the selected model index from the dropdown.
+        private void SelectModel(int index)
         {
-            GUILayout.Label("Models: " + _session.Folder);
-            if (GUILayout.Button("Export object under cursor + JPEG"))
-            {
-                Run(_session.ExportTarget);
-            }
-            var label = _files.Length == 0 ? "No GLB files" : Path.GetFileName(_files[_selected]);
-            if (GUILayout.Button("Model: " + label))
-            {
-                Refresh();
-                _listOpen = !_listOpen;
-            }
-            if (_listOpen)
-            {
-                DrawChoices();
-            }
-            GUI.enabled = _files.Length > 0;
-            if (GUILayout.Button("Import selected model"))
-            {
-                Run(() => _session.BeginPlacement(_files[_selected]));
-                _open = false;
-                RestoreCursor();
-            }
-            GUI.enabled = true;
-            if (GUILayout.Button("Erase imported model under cursor"))
-            {
-                Run(_session.EraseTarget);
-            }
-            GUILayout.Label(_message);
-            if (GUILayout.Button("Close"))
-            {
-                _open = false;
-                RestoreCursor();
-            }
-            GUI.DragWindow(new Rect(0, 0, 360, 24));
+            _selected = index;
+            _selection.text = Path.GetFileName(_files[index]);
+            _dropdown.Hide();
         }
 
-        // Shows each available model as a dropdown choice.
-        private void DrawChoices()
+        // Exports the object currently under the crosshair.
+        private void Export()
         {
-            _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(130));
-            for (var i = 0; i < _files.Length; i++)
-            {
-                if (GUILayout.Button(Path.GetFileName(_files[i])))
-                {
-                    _selected = i;
-                    _listOpen = false;
-                }
-            }
-            GUILayout.EndScrollView();
+            Run(_session.ExportTarget);
         }
 
-        // Converts expected operation errors into a visible message.
-        private void Run(Func<string> action)
+        // Starts a temporary placement of the chosen GLB.
+        private void Import()
+        {
+            if (_files.Length == 0) { return; }
+            if (Run(() => _session.BeginPlacement(_files[_selected]))) { Close(); }
+        }
+
+        // Erases only a previously imported model.
+        private void Erase()
+        {
+            Run(_session.EraseTarget);
+        }
+
+        // Displays operation results and logs unexpected failures.
+        private bool Run(Func<string> action)
         {
             try
             {
-                _message = action();
+                _status.text = action();
                 Refresh();
+                return true;
             }
             catch (Exception error)
             {
-                _message = error.Message;
+                _status.text = error.Message;
+                _log.LogWarning(error);
+                return false;
             }
         }
     }
