@@ -35,7 +35,15 @@ namespace Landoria.ModelForge
                 ["sunIntensity"] = sun != null ? sun.intensity : 1.2f,
                 ["sunRotation"] = VectorValue(sun != null ? sun.transform.eulerAngles :
                     new Vector3(45f, -30f, 0f)),
-                ["cameraFov"] = camera != null ? camera.fieldOfView : 60f
+                ["cameraFov"] = camera != null ? camera.fieldOfView : 60f,
+                ["cameraHdr"] = camera != null && camera.allowHDR,
+                ["sunShadows"] = sun != null && sun.shadows != LightShadows.None,
+                ["fog"] = RenderSettings.fog,
+                ["fogColor"] = ColorValue(RenderSettings.fogColor),
+                ["fogMode"] = (int)RenderSettings.fogMode,
+                ["fogDensity"] = RenderSettings.fogDensity,
+                ["fogStart"] = RenderSettings.fogStartDistance,
+                ["fogEnd"] = RenderSettings.fogEndDistance
             };
             File.WriteAllText(Path.ChangeExtension(glbPath, ".valheim.json"),
                 data.ToString(Formatting.Indented));

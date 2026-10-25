@@ -9,7 +9,7 @@ namespace Landoria.ModelForge
         private const string ProjectName = "UnityProject";
 
         // Adds the model and the editor scene builder to the working folder.
-        internal static string Write(string glbPath)
+        internal static string Write(string glbPath, string gameDataPath)
         {
             var project = Path.Combine(Path.GetDirectoryName(glbPath), ProjectName);
             var models = Path.Combine(project, "Assets", "Models");
@@ -39,6 +39,8 @@ namespace Landoria.ModelForge
             File.WriteAllText(Path.Combine(models, modelName + ".build"), "Build scene");
             File.WriteAllText(Path.Combine(editor, "ModelForgeSceneBuilder.cs"),
                 UnitySceneTemplate.SceneBuilder);
+            File.WriteAllText(Path.Combine(project, "ProjectSettings", "ModelForgeGameData.txt"),
+                gameDataPath);
             WriteOnce(Path.Combine(project, "Packages", "manifest.json"), UnitySceneTemplate.Manifest);
             WriteOnce(Path.Combine(project, "ProjectSettings", "ProjectVersion.txt"),
                 UnitySceneTemplate.ProjectVersion);

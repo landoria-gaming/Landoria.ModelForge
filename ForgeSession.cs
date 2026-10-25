@@ -54,9 +54,9 @@ namespace Landoria.ModelForge
         // Prepares a Unity scene for the chosen GLB and its captured materials.
         internal string GenerateUnityScene(string path)
         {
-            var project = UnitySceneExport.Write(path);
-            return "Unity scene requested in " + Path.GetFileName(project) +
-                "; custom shaders require matching Unity assets.";
+            var project = UnitySceneExport.Write(path, Application.dataPath);
+            return "Unity project prepared in " + Path.GetFileName(project) +
+                "; open it to build the scene and preview.";
         }
 
         // Loads an imported model as a movable local preview.

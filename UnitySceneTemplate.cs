@@ -14,6 +14,8 @@ using UnityEngine.Rendering;
 [InitializeOnLoad]
 internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
 {
+    private static readonly Dictionary<string, AssetBundle> LoadedBundles =
+        new Dictionary<string, AssetBundle>();
     [System.Serializable]
     private sealed class Snapshot
     {
@@ -23,6 +25,14 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         public float sunIntensity;
         public Vector3 sunRotation;
         public float cameraFov;
+        public bool cameraHdr;
+        public bool sunShadows;
+        public bool fog;
+        public Color fogColor;
+        public int fogMode;
+        public float fogDensity;
+        public float fogStart;
+        public float fogEnd;
     }
 
     [System.Serializable]
@@ -45,6 +55,33 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
     static ModelForgeSceneBuilder()
     {
         EditorApplication.delayCall += BuildMissingScenes;
+        EditorSceneManager.sceneOpened += OnSceneOpened;
+        EditorSceneManager.sceneSaving += OnSceneSaving;
+        EditorSceneManager.sceneSaved += OnSceneSaved;
+        EditorApplication.delayCall += RefreshOpenScenes;
+    }
+
+    private static void RefreshOpenScenes()
+    {
+        for (var i = 0; i < SceneManager.sceneCount; i++)
+        {
+            ApplyLiveShaders(SceneManager.GetSceneAt(i));
+        }
+    }
+
+    private static void OnSceneOpened(Scene scene, OpenSceneMode mode)
+    {
+        ApplyLiveShaders(scene);
+    }
+
+    private static void OnSceneSaving(Scene scene, string path)
+    {
+        RestoreStableMaterials(scene);
+    }
+
+    private static void OnSceneSaved(Scene scene)
+    {
+        ApplyLiveShaders(scene);
     }
 
     private static void OnPostprocessAllAssets(string[] imported, string[] deleted,
@@ -97,12 +134,15 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         var camera = cameraObject.AddComponent<Camera>();
         camera.tag = ""MainCamera"";
         camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.nearClipPlane = .01f;
         camera.backgroundColor = new Color(.16f, .18f, .2f);
         if (settings != null && settings.cameraFov > 0f) { camera.fieldOfView = settings.cameraFov; }
-        cameraObject.transform.position = bounds.center + new Vector3(
-            bounds.extents.x + bounds.extents.z + 2f,
-            bounds.extents.y + 1f,
-            -(bounds.extents.x + bounds.extents.z + 2f));
+        if (settings != null) { camera.allowHDR = settings.cameraHdr; }
+        var radius = Mathf.Max(bounds.extents.magnitude, .05f);
+        var distance = Mathf.Max(.2f, radius / Mathf.Tan(camera.fieldOfView *
+            .5f * Mathf.Deg2Rad) * 1.5f);
+        cameraObject.transform.position = bounds.center +
+            new Vector3(1f, .55f, -1f).normalized * distance;
         cameraObject.transform.LookAt(bounds.center);
         var lightObject = new GameObject(""Preview Light"");
         SceneManager.MoveGameObjectToScene(lightObject, scene);
@@ -110,6 +150,8 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         light.type = LightType.Directional;
         light.intensity = settings != null ? settings.sunIntensity : 1.2f;
         light.color = settings != null ? settings.sunColor : Color.white;
+        light.shadows = settings != null && settings.sunShadows
+            ? LightShadows.Soft : LightShadows.None;
         lightObject.transform.rotation = settings != null
             ? Quaternion.Euler(settings.sunRotation) : Quaternion.Euler(45f, -30f, 0f);
         if (settings != null)
@@ -117,8 +159,15 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = settings.ambient;
             RenderSettings.sun = light;
+            RenderSettings.fog = settings.fog;
+            RenderSettings.fogColor = settings.fogColor;
+            RenderSettings.fogMode = (FogMode)settings.fogMode;
+            RenderSettings.fogDensity = settings.fogDensity;
+            RenderSettings.fogStartDistance = settings.fogStart;
+            RenderSettings.fogEndDistance = settings.fogEnd;
         }
         EditorSceneManager.SaveScene(scene, path);
+        ApplyLiveShaders(scene);
         SaveJpeg(camera, Path.GetFileNameWithoutExtension(path));
         if (mode == NewSceneMode.Additive) { EditorSceneManager.CloseScene(scene, true); }
     }
@@ -134,9 +183,9 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
                 + ""_"" + i + "".mat"";
             var material = AssetDatabase.LoadAssetAtPath<Material>(assetPath);
             var shader = Shader.Find(data.shader);
-            if (shader == null)
+            if (shader == null || (shader.name != ""Standard"" &&
+                string.IsNullOrEmpty(AssetDatabase.GetAssetPath(shader))))
             {
-                Debug.LogWarning(""ModelForge: shader unavailable in this Unity project: "" + data.shader);
                 shader = Shader.Find(""Standard"");
             }
             if (material == null)
@@ -145,6 +194,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
                 AssetDatabase.CreateAsset(material, assetPath);
             }
             material.shader = shader;
+            material.name = data.name;
             RestoreProperties(material, data, modelPath);
             EditorUtility.SetDirty(material);
             resolved[data.name] = material;
@@ -164,7 +214,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         }
     }
 
-    private static void RestoreProperties(Material material, MaterialData data, string modelPath)
+" + UnityShaderTemplate.Code + @"    private static void RestoreProperties(Material material, MaterialData data, string modelPath)
     {
         if (data.floats != null)
         {
