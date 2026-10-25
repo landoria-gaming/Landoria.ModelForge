@@ -7,14 +7,14 @@ using UnityEngine.UI;
 
 namespace Landoria.ModelForge
 {
-    // Controls a Valheim-styled Unity UI dialog for local model actions.
+    // Controls local model actions inside Valheim's native popup.
     internal sealed class ForgeWindow
     {
         private readonly ForgeSession _session;
         private readonly ManualLogSource _log;
         private ForgeUiFactory _ui;
         private ForgeDropdown _dropdown;
-        private GameObject _root;
+        private NativePopupHost _host;
         private TMP_Text _status;
         private TMP_Text _targetName;
         private TMP_Text _selection;
@@ -25,7 +25,7 @@ namespace Landoria.ModelForge
         private bool _previousRequested;
         private string[] _files = Array.Empty<string>();
         private int _selected;
-        internal bool IsOpen => _root != null && _root.activeSelf;
+        internal bool IsOpen => _host != null && _host.IsOpen;
 
         // Stores the model session and logger.
         internal ForgeWindow(ForgeSession session, ManualLogSource log)
@@ -38,12 +38,15 @@ namespace Landoria.ModelForge
         internal void Toggle()
         {
             if (IsOpen) { Close(); return; }
-            if (!EnsureCreated()) { return; }
             _session.CaptureTarget();
             _previousLock = ZCursor.LockState;
             _previousRequested = ZCursor.IsRequested;
+            var host = new NativePopupHost(_log);
+            if (!host.Open(out var panel, out var sample)) { return; }
+            _host = host;
+            _ui = new ForgeUiFactory(sample);
+            BuildContents(panel);
             Refresh();
-            _root.SetActive(true);
             UpdateCursor();
         }
 
@@ -51,8 +54,8 @@ namespace Landoria.ModelForge
         internal void Close()
         {
             if (!IsOpen) { return; }
-            _root.SetActive(false);
-            _dropdown.Hide();
+            _host.Close();
+            _host = null;
             ZCursor.LockState = _previousLock;
             if (_previousRequested) { ZCursor.Show(); }
             else { ZCursor.Hide(); }
@@ -72,31 +75,11 @@ namespace Landoria.ModelForge
         internal void Dispose()
         {
             Close();
-            if (_root != null) { UnityEngine.Object.Destroy(_root); }
-            _root = null;
         }
 
-        // Builds the dialog after Valheim has created its own UI.
-        private bool EnsureCreated()
-        {
-            if (_root != null) { return true; }
-            var sample = Menu.instance?.m_continueButton ?? InventoryGui.instance?.m_craftButton;
-            if (sample == null)
-            {
-                _log.LogWarning("ModelForge could not find a Valheim button style yet.");
-                return false;
-            }
-            _ui = new ForgeUiFactory(sample, Menu.instance?.m_menuDialog);
-            _root = _ui.CreateCanvas(out var panel);
-            BuildContents(panel);
-            _root.SetActive(false);
-            return true;
-        }
-
-        // Adds the Valheim-styled labels, buttons, and file list.
+        // Adds model actions and the file list inside the native frame.
         private void BuildContents(RectTransform panel)
         {
-            _ui.Label(panel, "ModelForge", 0, -28, 480, 46, 30, TextAlignmentOptions.Center);
             _targetName = _ui.Label(panel, "", 0, -78, 520, 28, 18, TextAlignmentOptions.Center);
             _export = _ui.Button(panel, "Export selected model + JPEG", -132, Export);
             _selection = _ui.Label(panel, "No GLB files", 0, -188, 440, 36, 20, TextAlignmentOptions.Center);

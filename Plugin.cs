@@ -1,6 +1,5 @@
 using System.IO;
 using BepInEx;
-using HarmonyLib;
 using Landoria.Shared;
 using UnityEngine;
 
@@ -14,19 +13,13 @@ namespace Landoria.ModelForge
         private const string PluginName = "Landoria.ModelForge";
         private const string PluginVersion = "1.0.0";
 
-        private static Plugin _instance;
-        private Harmony _harmony;
         private ForgeSession _session;
         private ForgeWindow _window;
-        internal static bool DialogOpen => _instance != null && _instance._window != null && _instance._window.IsOpen;
 
         // Creates the working directory and session.
         private void Awake()
         {
-            _instance = this;
             Logger.LogInfo($"AssemblyVersion: {GetType().Assembly.GetName().Version}.");
-            _harmony = new Harmony(PluginGuid);
-            _harmony.PatchAll();
             var folder = Path.Combine(Paths.ConfigPath, "ModelForge", "Models");
             Directory.CreateDirectory(folder);
             _session = new ForgeSession(folder, Logger);
@@ -60,9 +53,6 @@ namespace Landoria.ModelForge
             _session?.Dispose();
             _window = null;
             _session = null;
-            _harmony?.UnpatchSelf();
-            _harmony = null;
-            _instance = null;
             Logger.LogInfo($"{PluginName} {PluginVersion} is unloaded.");
         }
     }
