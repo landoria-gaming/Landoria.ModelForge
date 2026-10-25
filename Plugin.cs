@@ -1,0 +1,65 @@
+using System.IO;
+using BepInEx;
+using Landoria.Shared;
+using UnityEngine;
+
+namespace Landoria.ModelForge
+{
+    // Owns the local ModelForge session and its keyboard shortcut.
+    [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
+    public sealed class Plugin : BaseUnityPlugin
+    {
+        private const string PluginGuid = "Landoria.ModelForge";
+        private const string PluginName = "Landoria.ModelForge";
+        private const string PluginVersion = "1.0.0";
+
+        private ForgeSession _session;
+        private ForgeWindow _window;
+
+        // Creates the working directory and session.
+        private void Awake()
+        {
+            Logger.LogInfo($"AssemblyVersion: {GetType().Assembly.GetName().Version}.");
+            var folder = Path.Combine(Paths.ConfigPath, "ModelForge", "Models");
+            Directory.CreateDirectory(folder);
+            _session = new ForgeSession(folder, Logger);
+            _window = new ForgeWindow(_session);
+            Preference.Initialize(Config);
+            ConfigWatcher.Initialize(Config, Logger, "ModelForge", () => Preference.RestoreDefaults(Config));
+            Logger.LogInfo($"{PluginName} {PluginVersion} is loaded. Models: {folder}");
+        }
+
+        // Opens the window and updates a pending placement.
+        private void Update()
+        {
+            ConfigWatcher.Update();
+            if (Player.m_localPlayer == null || Camera.main == null)
+            {
+                return;
+            }
+            if (Shortcut.IsDown(Preference.OpenShortcut))
+            {
+                _window.Toggle();
+            }
+            _window.UpdateCursor();
+            _session.UpdatePlacement();
+        }
+
+        // Draws the local tool window.
+        private void OnGUI()
+        {
+            _window?.Draw();
+        }
+
+        // Removes temporary models when the plugin unloads.
+        private void OnDestroy()
+        {
+            ConfigWatcher.Dispose();
+            _window?.Close();
+            _session?.Dispose();
+            _window = null;
+            _session = null;
+            Logger.LogInfo($"{PluginName} {PluginVersion} is unloaded.");
+        }
+    }
+}

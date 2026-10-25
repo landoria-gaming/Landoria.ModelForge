@@ -1,0 +1,16 @@
+{
+  "name": "ModelForge",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/landoria-gaming/Landoria.ModelForge",
+  "description": "Export static models to GLB and preview local models in Valheim.",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2351"
+  ],
+  "categories": [
+    "deep-north-update",
+    "ai-generated",
+    "mods",
+    "client-side",
+    "utility"
+  ]
+}

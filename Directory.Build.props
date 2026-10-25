@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>10</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="netstandard">
+      <HintPath>$(ValheimGamePath)\valheim_Data\Managed\netstandard.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <PackageReference Include="HarmonyValidator" Version="1.0.0" PrivateAssets="all" />
+  </ItemGroup>
+</Project>
