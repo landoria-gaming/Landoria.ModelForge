@@ -10,6 +10,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
+using UnityEngine.PostProcessing;
 
 [InitializeOnLoad]
 internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
@@ -25,6 +26,10 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         public float sunIntensity;
         public Vector3 sunRotation;
         public float cameraFov;
+        public float cameraAspect;
+        public bool hasCameraPose;
+        public Vector3 cameraPosition;
+        public Quaternion cameraRotation;
         public bool cameraHdr;
         public bool sunShadows;
         public bool fog;
@@ -33,6 +38,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         public float fogDensity;
         public float fogStart;
         public float fogEnd;
+        public string postProcessingJson;
     }
 
     [System.Serializable]
@@ -137,6 +143,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         camera.nearClipPlane = .01f;
         camera.backgroundColor = new Color(.16f, .18f, .2f);
         if (settings != null && settings.cameraFov > 0f) { camera.fieldOfView = settings.cameraFov; }
+        if (settings != null && settings.cameraAspect > 0f) { camera.aspect = settings.cameraAspect; }
         if (settings != null) { camera.allowHDR = settings.cameraHdr; }
         var radius = Mathf.Max(bounds.extents.magnitude, .05f);
         var distance = Mathf.Max(.2f, radius / Mathf.Tan(camera.fieldOfView *
@@ -144,6 +151,11 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         cameraObject.transform.position = bounds.center +
             new Vector3(1f, .55f, -1f).normalized * distance;
         cameraObject.transform.LookAt(bounds.center);
+        if (settings != null && settings.hasCameraPose)
+        {
+            cameraObject.transform.position = settings.cameraPosition;
+            cameraObject.transform.rotation = settings.cameraRotation;
+        }
         var lightObject = new GameObject(""Preview Light"");
         SceneManager.MoveGameObjectToScene(lightObject, scene);
         var light = lightObject.AddComponent<Light>();
@@ -154,6 +166,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
             ? LightShadows.Soft : LightShadows.None;
         lightObject.transform.rotation = settings != null
             ? Quaternion.Euler(settings.sunRotation) : Quaternion.Euler(45f, -30f, 0f);
+        ApplyPostProcessing(cameraObject, path, settings);
         if (settings != null)
         {
             RenderSettings.ambientMode = AmbientMode.Flat;
@@ -170,6 +183,33 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         ApplyLiveShaders(scene);
         SaveJpeg(camera, Path.GetFileNameWithoutExtension(path));
         if (mode == NewSceneMode.Additive) { EditorSceneManager.CloseScene(scene, true); }
+    }
+
+    private static void ApplyPostProcessing(GameObject cameraObject, string scenePath,
+        Snapshot settings)
+    {
+        if (settings == null || string.IsNullOrEmpty(settings.postProcessingJson)) { return; }
+        const string profileFolder = ""Assets/Profiles"";
+        Directory.CreateDirectory(profileFolder);
+        var path = profileFolder + ""/"" + Path.GetFileNameWithoutExtension(scenePath) + "".asset"";
+        var profile = AssetDatabase.LoadAssetAtPath<PostProcessingProfile>(path);
+        if (profile == null)
+        {
+            profile = ScriptableObject.CreateInstance<PostProcessingProfile>();
+            AssetDatabase.CreateAsset(profile, path);
+        }
+        JsonUtility.FromJsonOverwrite(settings.postProcessingJson, profile);
+        var antialiasing = profile.antialiasing.settings;
+        antialiasing.method = AntialiasingModel.Method.Fxaa;
+        profile.antialiasing.settings = antialiasing;
+        var bloom = profile.bloom.settings;
+        var lensDirt = bloom.lensDirt;
+        lensDirt.texture = null;
+        bloom.lensDirt = lensDirt;
+        profile.bloom.settings = bloom;
+        EditorUtility.SetDirty(profile);
+        AssetDatabase.SaveAssets();
+        cameraObject.AddComponent<PostProcessingBehaviour>().profile = profile;
     }
 
     private static void ApplyMaterials(GameObject model, string modelPath, Snapshot settings)
@@ -264,16 +304,17 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
     {
         const string previewFolder = ""Assets/Previews"";
         Directory.CreateDirectory(previewFolder);
-        var target = new RenderTexture(1024, 1024, 24);
+        const int width = 1600;
+        var height = Mathf.RoundToInt(width / Mathf.Clamp(camera.aspect, 1f, 2.4f));
+        var target = new RenderTexture(width, height, 24);
         var previous = RenderTexture.active;
-        var image = new Texture2D(1024, 1024, TextureFormat.RGB24, false);
+        var image = new Texture2D(width, height, TextureFormat.RGB24, false);
         try
         {
-            camera.aspect = 1f;
             camera.targetTexture = target;
             camera.Render();
             RenderTexture.active = target;
-            image.ReadPixels(new Rect(0, 0, 1024, 1024), 0, 0);
+            image.ReadPixels(new Rect(0, 0, width, height), 0, 0);
             image.Apply();
             var previewPath = previewFolder + ""/"" + name + "".jpg"";
             File.WriteAllBytes(previewPath, image.EncodeToJPG(90));

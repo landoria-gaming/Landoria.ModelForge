@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 
 namespace Landoria.ModelForge
 {
@@ -41,10 +42,33 @@ namespace Landoria.ModelForge
                 UnitySceneTemplate.SceneBuilder);
             File.WriteAllText(Path.Combine(project, "ProjectSettings", "ModelForgeGameData.txt"),
                 gameDataPath);
+            WritePostProcessing(project, gameDataPath);
             WriteOnce(Path.Combine(project, "Packages", "manifest.json"), UnitySceneTemplate.Manifest);
             WriteOnce(Path.Combine(project, "ProjectSettings", "ProjectVersion.txt"),
                 UnitySceneTemplate.ProjectVersion);
             return project;
+        }
+
+        // Supplies Valheim's post-processing runtime and the matching open-source shaders.
+        private static void WritePostProcessing(string project, string gameDataPath)
+        {
+            var plugins = Path.Combine(project, "Assets", "Plugins");
+            var shaders = Path.Combine(project, "Assets", "Resources", "Shaders");
+            Directory.CreateDirectory(plugins);
+            Directory.CreateDirectory(shaders);
+            var runtime = Path.Combine(gameDataPath, "Managed", "assembly_postprocessing.dll");
+            File.Copy(runtime, Path.Combine(plugins, "assembly_postprocessing.dll"), true);
+            var assembly = Assembly.GetExecutingAssembly();
+            const string prefix = "Landoria.ModelForge.PostProcessingResources.Shaders.";
+            foreach (var name in assembly.GetManifestResourceNames())
+            {
+                if (!name.StartsWith(prefix, StringComparison.Ordinal)) { continue; }
+                using (var input = assembly.GetManifestResourceStream(name))
+                using (var output = File.Create(Path.Combine(shaders, name.Substring(prefix.Length))))
+                {
+                    input.CopyTo(output);
+                }
+            }
         }
 
         // Preserves changes made later inside the generated Unity project.

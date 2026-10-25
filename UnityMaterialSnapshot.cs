@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.PostProcessing;
 
 namespace Landoria.ModelForge
 {
@@ -27,15 +28,24 @@ namespace Landoria.ModelForge
             }
             var sun = RenderSettings.sun;
             var camera = Camera.main;
+            var post = camera != null ? camera.GetComponent<PostProcessingBehaviour>() : null;
             var data = new JObject
             {
                 ["materials"] = materials,
                 ["ambient"] = ColorValue(RenderSettings.ambientLight),
                 ["sunColor"] = ColorValue(sun != null ? sun.color : Color.white),
                 ["sunIntensity"] = sun != null ? sun.intensity : 1.2f,
-                ["sunRotation"] = VectorValue(sun != null ? sun.transform.eulerAngles :
+                ["sunRotation"] = VectorValue(sun != null ?
+                    (Quaternion.Inverse(root.transform.rotation) * sun.transform.rotation).eulerAngles :
                     new Vector3(45f, -30f, 0f)),
                 ["cameraFov"] = camera != null ? camera.fieldOfView : 60f,
+                ["cameraAspect"] = camera != null ? camera.aspect : 1f,
+                ["hasCameraPose"] = camera != null,
+                ["cameraPosition"] = VectorValue(camera != null ?
+                    root.transform.InverseTransformPoint(camera.transform.position) : Vector3.zero),
+                ["cameraRotation"] = QuaternionValue(camera != null ?
+                    Quaternion.Inverse(root.transform.rotation) * camera.transform.rotation :
+                    Quaternion.identity),
                 ["cameraHdr"] = camera != null && camera.allowHDR,
                 ["sunShadows"] = sun != null && sun.shadows != LightShadows.None,
                 ["fog"] = RenderSettings.fog,
@@ -45,6 +55,10 @@ namespace Landoria.ModelForge
                 ["fogStart"] = RenderSettings.fogStartDistance,
                 ["fogEnd"] = RenderSettings.fogEndDistance
             };
+            if (post != null && post.enabled && post.profile != null)
+            {
+                data["postProcessingJson"] = JsonUtility.ToJson(post.profile);
+            }
             File.WriteAllText(Path.ChangeExtension(glbPath, ".valheim.json"),
                 data.ToString(Formatting.Indented));
         }
@@ -116,6 +130,12 @@ namespace Landoria.ModelForge
         {
             return new JObject { ["x"] = vector.x, ["y"] = vector.y,
                 ["z"] = vector.z, ["w"] = vector.w };
+        }
+
+        private static JObject QuaternionValue(Quaternion value)
+        {
+            return new JObject { ["x"] = value.x, ["y"] = value.y,
+                ["z"] = value.z, ["w"] = value.w };
         }
     }
 }
