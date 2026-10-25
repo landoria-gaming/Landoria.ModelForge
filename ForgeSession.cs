@@ -45,16 +45,9 @@ namespace Landoria.ModelForge
             var name = SafeName(_target.name);
             var path = UniquePath(name);
             GlbWriter.Write(_target, path);
-            try
-            {
-                PreviewCapture.Write(_target, Path.ChangeExtension(path, ".jpg"));
-            }
-            catch (Exception error)
-            {
-                _log.LogWarning("JPEG preview failed: " + error.Message);
-                return "Exported " + Path.GetFileName(path) + "; JPEG failed.";
-            }
-            return "Exported " + Path.GetFileName(path) + " and JPEG.";
+            var unityProject = UnitySceneExport.Write(path);
+            return "Exported " + Path.GetFileName(path) + " to " + Path.GetFileName(unityProject) +
+                "; Unity creates the scene and JPEG when opened.";
         }
 
         // Loads an imported model as a movable local preview.
