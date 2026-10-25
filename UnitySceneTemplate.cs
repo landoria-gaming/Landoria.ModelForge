@@ -160,7 +160,9 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         SceneManager.MoveGameObjectToScene(lightObject, scene);
         var light = lightObject.AddComponent<Light>();
         light.type = LightType.Directional;
-        light.intensity = settings != null ? settings.sunIntensity : 1.2f;
+        // Valheim's scene lighting is too bright when rebuilt as one flat preview light.
+        const float previewLightScale = .35f;
+        light.intensity = (settings != null ? settings.sunIntensity : 1.2f) * previewLightScale;
         light.color = settings != null ? settings.sunColor : Color.white;
         light.shadows = settings != null && settings.sunShadows
             ? LightShadows.Soft : LightShadows.None;
@@ -170,7 +172,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         if (settings != null)
         {
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = settings.ambient;
+            RenderSettings.ambientLight = settings.ambient * previewLightScale;
             RenderSettings.sun = light;
             RenderSettings.fog = settings.fog;
             RenderSettings.fogColor = settings.fogColor;
@@ -202,6 +204,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         var antialiasing = profile.antialiasing.settings;
         antialiasing.method = AntialiasingModel.Method.Fxaa;
         profile.antialiasing.settings = antialiasing;
+        profile.motionBlur.enabled = false;
         var bloom = profile.bloom.settings;
         var lensDirt = bloom.lensDirt;
         lensDirt.texture = null;
