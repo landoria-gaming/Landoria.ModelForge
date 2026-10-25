@@ -4,17 +4,60 @@ namespace Landoria.ModelForge
     internal static class UnitySceneTemplate
     {
         internal const string SceneBuilder = @"using System.IO;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Rendering;
 
 [InitializeOnLoad]
-internal static class ModelForgeSceneBuilder
+internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
 {
+    [System.Serializable]
+    private sealed class Snapshot
+    {
+        public MaterialData[] materials;
+        public Color ambient;
+        public Color sunColor;
+        public float sunIntensity;
+        public Vector3 sunRotation;
+        public float cameraFov;
+    }
+
+    [System.Serializable]
+    private sealed class MaterialData
+    {
+        public string name;
+        public string shader;
+        public FloatData[] floats;
+        public ColorData[] colors;
+        public VectorData[] vectors;
+        public TextureData[] textures;
+        public string[] keywords;
+    }
+
+    [System.Serializable] private sealed class FloatData { public string name; public float value; }
+    [System.Serializable] private sealed class ColorData { public string name; public Color value; }
+    [System.Serializable] private sealed class VectorData { public string name; public Vector4 value; }
+    [System.Serializable] private sealed class TextureData { public string name; public string file; }
+
     static ModelForgeSceneBuilder()
     {
         EditorApplication.delayCall += BuildMissingScenes;
+    }
+
+    private static void OnPostprocessAllAssets(string[] imported, string[] deleted,
+        string[] moved, string[] movedFrom)
+    {
+        foreach (var path in imported)
+        {
+            if (path.EndsWith("".glb"") || path.EndsWith("".build""))
+            {
+                EditorApplication.delayCall += BuildMissingScenes;
+                return;
+            }
+        }
     }
 
     [MenuItem(""ModelForge/Build missing scenes"")]
@@ -27,21 +70,27 @@ internal static class ModelForgeSceneBuilder
         {
             var modelPath = file.Replace('\\', '/');
             var scenePath = sceneFolder + ""/"" + Path.GetFileNameWithoutExtension(file) + "".unity"";
-            if (File.Exists(scenePath)) { continue; }
+            var requestPath = Path.ChangeExtension(modelPath, "".build"");
+            if (File.Exists(scenePath) && !File.Exists(requestPath)) { continue; }
             AssetDatabase.ImportAsset(modelPath, ImportAssetOptions.ForceUpdate);
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
             if (prefab == null) { continue; }
-            BuildScene(prefab, scenePath);
+            BuildScene(prefab, modelPath, scenePath);
+            if (File.Exists(requestPath)) { File.Delete(requestPath); }
         }
     }
 
-    private static void BuildScene(GameObject prefab, string path)
+    private static void BuildScene(GameObject prefab, string modelPath, string path)
     {
         var mode = string.IsNullOrEmpty(SceneManager.GetActiveScene().path)
             ? NewSceneMode.Single : NewSceneMode.Additive;
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, mode);
         var model = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
         model.name = prefab.name;
+        var metadataPath = Path.ChangeExtension(modelPath, "".valheim.json"");
+        var settings = File.Exists(metadataPath)
+            ? JsonUtility.FromJson<Snapshot>(File.ReadAllText(metadataPath)) : null;
+        if (settings != null) { ApplyMaterials(model, modelPath, settings); }
         var bounds = ModelBounds(model);
         var cameraObject = new GameObject(""Preview Camera"");
         SceneManager.MoveGameObjectToScene(cameraObject, scene);
@@ -49,6 +98,7 @@ internal static class ModelForgeSceneBuilder
         camera.tag = ""MainCamera"";
         camera.clearFlags = CameraClearFlags.SolidColor;
         camera.backgroundColor = new Color(.16f, .18f, .2f);
+        if (settings != null && settings.cameraFov > 0f) { camera.fieldOfView = settings.cameraFov; }
         cameraObject.transform.position = bounds.center + new Vector3(
             bounds.extents.x + bounds.extents.z + 2f,
             bounds.extents.y + 1f,
@@ -58,11 +108,106 @@ internal static class ModelForgeSceneBuilder
         SceneManager.MoveGameObjectToScene(lightObject, scene);
         var light = lightObject.AddComponent<Light>();
         light.type = LightType.Directional;
-        light.intensity = 1.2f;
-        lightObject.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
+        light.intensity = settings != null ? settings.sunIntensity : 1.2f;
+        light.color = settings != null ? settings.sunColor : Color.white;
+        lightObject.transform.rotation = settings != null
+            ? Quaternion.Euler(settings.sunRotation) : Quaternion.Euler(45f, -30f, 0f);
+        if (settings != null)
+        {
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = settings.ambient;
+            RenderSettings.sun = light;
+        }
         EditorSceneManager.SaveScene(scene, path);
         SaveJpeg(camera, Path.GetFileNameWithoutExtension(path));
         if (mode == NewSceneMode.Additive) { EditorSceneManager.CloseScene(scene, true); }
+    }
+
+    private static void ApplyMaterials(GameObject model, string modelPath, Snapshot settings)
+    {
+        var resolved = new Dictionary<string, Material>();
+        Directory.CreateDirectory(""Assets/Materials"");
+        for (var i = 0; settings.materials != null && i < settings.materials.Length; i++)
+        {
+            var data = settings.materials[i];
+            var assetPath = ""Assets/Materials/"" + Path.GetFileNameWithoutExtension(modelPath)
+                + ""_"" + i + "".mat"";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(assetPath);
+            var shader = Shader.Find(data.shader);
+            if (shader == null)
+            {
+                Debug.LogWarning(""ModelForge: shader unavailable in this Unity project: "" + data.shader);
+                shader = Shader.Find(""Standard"");
+            }
+            if (material == null)
+            {
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, assetPath);
+            }
+            material.shader = shader;
+            RestoreProperties(material, data, modelPath);
+            EditorUtility.SetDirty(material);
+            resolved[data.name] = material;
+        }
+        AssetDatabase.SaveAssets();
+        foreach (var renderer in model.GetComponentsInChildren<Renderer>(true))
+        {
+            var materials = renderer.sharedMaterials;
+            for (var i = 0; i < materials.Length; i++)
+            {
+                if (materials[i] != null && resolved.TryGetValue(materials[i].name, out var source))
+                {
+                    materials[i] = source;
+                }
+            }
+            renderer.sharedMaterials = materials;
+        }
+    }
+
+    private static void RestoreProperties(Material material, MaterialData data, string modelPath)
+    {
+        if (data.floats != null)
+        {
+            foreach (var entry in data.floats)
+            {
+                if (material.HasProperty(entry.name)) { material.SetFloat(entry.name, entry.value); }
+            }
+        }
+        if (data.colors != null)
+        {
+            foreach (var entry in data.colors)
+            {
+                if (material.HasProperty(entry.name)) { material.SetColor(entry.name, entry.value); }
+            }
+        }
+        if (data.vectors != null)
+        {
+            foreach (var entry in data.vectors)
+            {
+                if (material.HasProperty(entry.name)) { material.SetVector(entry.name, entry.value); }
+            }
+        }
+        RestoreTextures(material, data, modelPath);
+        if (material.shader.name == data.shader && data.keywords != null)
+        {
+            material.shaderKeywords = data.keywords;
+        }
+    }
+
+    private static void RestoreTextures(Material material, MaterialData data, string modelPath)
+    {
+        if (data.textures == null) { return; }
+        var folder = Path.ChangeExtension(modelPath, "".textures"");
+        foreach (var entry in data.textures)
+        {
+            var path = folder + ""/"" + entry.file;
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (texture != null && material.HasProperty(entry.name))
+            {
+                material.SetTexture(entry.name, texture);
+            }
+        }
     }
 
     private static void SaveJpeg(Camera camera, string name)

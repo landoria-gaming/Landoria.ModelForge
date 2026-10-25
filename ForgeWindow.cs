@@ -19,6 +19,7 @@ namespace Landoria.ModelForge
         private TMP_Text _targetName;
         private TMP_Text _selection;
         private Button _export;
+        private Button _unity;
         private Button _import;
         private Button _erase;
         private CursorLockMode _previousLock;
@@ -81,7 +82,8 @@ namespace Landoria.ModelForge
         private void BuildContents(RectTransform panel)
         {
             _targetName = _ui.Label(panel, "", 0, -78, 520, 28, 18, TextAlignmentOptions.Center);
-            _export = _ui.Button(panel, "Export selected model + JPEG", -132, Export);
+            _export = _ui.Button(panel, "Export GLB", -132, Export, -135, 250);
+            _unity = _ui.Button(panel, "Generate Unity scene", -132, GenerateUnityScene, 135, 250);
             _selection = _ui.Label(panel, "No GLB files", 0, -188, 440, 36, 20, TextAlignmentOptions.Center);
             _ui.Button(panel, "Choose model", -230, ToggleDropdown);
             _dropdown = new ForgeDropdown(_ui, panel, -267, SelectModel);
@@ -102,6 +104,7 @@ namespace Landoria.ModelForge
             _erase.interactable = _session.CanEraseTarget;
             _selection.text = _files.Length == 0 ? "No GLB files" : Path.GetFileName(_files[_selected]);
             _import.interactable = _files.Length > 0;
+            _unity.interactable = _files.Length > 0;
             _dropdown.SetFiles(_files);
         }
 
@@ -123,7 +126,17 @@ namespace Landoria.ModelForge
         // Exports the object captured when the dialog opened.
         private void Export()
         {
-            Run(_session.ExportTarget);
+            if (!Run(_session.ExportTarget)) { return; }
+            _selected = Array.IndexOf(_files, _session.LastExportPath);
+            if (_selected < 0) { _selected = 0; }
+            Refresh();
+        }
+
+        // Generates or refreshes a Unity preview project for the chosen GLB.
+        private void GenerateUnityScene()
+        {
+            if (_files.Length == 0) { return; }
+            Run(() => _session.GenerateUnityScene(_files[_selected]));
         }
 
         // Starts a temporary placement of the chosen GLB.

@@ -18,6 +18,7 @@ namespace Landoria.ModelForge
         internal string TargetName => _target != null ? SafeName(_target.name) : "No model under cursor";
         internal bool HasTarget => _target != null;
         internal bool CanEraseTarget => _target != null && _placed.Contains(_target);
+        internal string LastExportPath { get; private set; }
 
         // Stores the local working folder and logger.
         internal ForgeSession(string folder, ManualLogSource log)
@@ -45,9 +46,17 @@ namespace Landoria.ModelForge
             var name = SafeName(_target.name);
             var path = UniquePath(name);
             GlbWriter.Write(_target, path);
-            var unityProject = UnitySceneExport.Write(path);
-            return "Exported " + Path.GetFileName(path) + " to " + Path.GetFileName(unityProject) +
-                "; Unity creates the scene and JPEG when opened.";
+            UnityMaterialSnapshot.Write(_target, path);
+            LastExportPath = path;
+            return "Exported " + Path.GetFileName(path) + ".";
+        }
+
+        // Prepares a Unity scene for the chosen GLB and its captured materials.
+        internal string GenerateUnityScene(string path)
+        {
+            var project = UnitySceneExport.Write(path);
+            return "Unity scene requested in " + Path.GetFileName(project) +
+                "; custom shaders require matching Unity assets.";
         }
 
         // Loads an imported model as a movable local preview.

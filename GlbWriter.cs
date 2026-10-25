@@ -179,7 +179,7 @@ namespace Landoria.ModelForge
         }
 
         // Reads a GPU texture into PNG bytes without changing the game asset.
-        private static byte[] TextureBytes(Texture texture)
+        internal static byte[] TextureBytes(Texture texture)
         {
             var width = Math.Min(texture.width, 2048);
             var height = Math.Min(texture.height, 2048);

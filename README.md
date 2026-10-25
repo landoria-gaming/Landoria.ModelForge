@@ -1,6 +1,5 @@
 ﻿# ModelForge
-Export static Valheim models as standard GLB files, then preview edited GLB files in the game.
-- Press **Left Shift + F** to open the menu; configure `OpenShortcut` in `Landoria.ModelForge.cfg`.
-- **Export** saves a GLB and a Unity project in `BepInEx/config/ModelForge/Models`; open `UnityProject` to generate a scene and JPEG from the GLB.
-- **Import** selects a GLB; aim, scroll to rotate, click to place, or press Escape to cancel.
-- **Erase** removes a placed ModelForge model. Placements are local and temporary; animated models are unsupported.
+Export static Valheim models as GLB files, then preview edited files locally in the game.
+- **Left Shift + F** opens the menu; **Export GLB** saves the model and live material settings in `BepInEx/config/ModelForge/Models`.
+- **Generate Unity scene** creates a project with the selected GLB, captured settings, camera, light, and JPEG; custom shaders need matching Unity assets.
+- **Import** places a selected GLB locally (wheel rotates, click places, Escape cancels); **Erase** removes it. Animated models are unsupported.

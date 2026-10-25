@@ -19,8 +19,26 @@ namespace Landoria.ModelForge
             Directory.CreateDirectory(Path.Combine(project, "Assets", "Scenes"));
             Directory.CreateDirectory(Path.Combine(project, "Packages"));
             Directory.CreateDirectory(Path.Combine(project, "ProjectSettings"));
+            var modelName = Path.GetFileNameWithoutExtension(glbPath);
             File.Copy(glbPath, Path.Combine(models, Path.GetFileName(glbPath)), true);
-            WriteOnce(Path.Combine(editor, "ModelForgeSceneBuilder.cs"), UnitySceneTemplate.SceneBuilder);
+            var metadata = Path.ChangeExtension(glbPath, ".valheim.json");
+            if (File.Exists(metadata))
+            {
+                File.Copy(metadata, Path.Combine(models, Path.GetFileName(metadata)), true);
+            }
+            var sourceTextures = Path.Combine(Path.GetDirectoryName(glbPath), modelName + ".textures");
+            if (Directory.Exists(sourceTextures))
+            {
+                var targetTextures = Path.Combine(models, modelName + ".textures");
+                Directory.CreateDirectory(targetTextures);
+                foreach (var texture in Directory.GetFiles(sourceTextures, "*.png"))
+                {
+                    File.Copy(texture, Path.Combine(targetTextures, Path.GetFileName(texture)), true);
+                }
+            }
+            File.WriteAllText(Path.Combine(models, modelName + ".build"), "Build scene");
+            File.WriteAllText(Path.Combine(editor, "ModelForgeSceneBuilder.cs"),
+                UnitySceneTemplate.SceneBuilder);
             WriteOnce(Path.Combine(project, "Packages", "manifest.json"), UnitySceneTemplate.Manifest);
             WriteOnce(Path.Combine(project, "ProjectSettings", "ProjectVersion.txt"),
                 UnitySceneTemplate.ProjectVersion);

@@ -19,15 +19,16 @@ namespace Landoria.ModelForge
         }
 
         // Adds a native-looking button with its own action callback.
-        internal Button Button(Transform parent, string title, float y, Action callback)
+        internal Button Button(Transform parent, string title, float y, Action callback,
+            float x = 0, float width = 520)
         {
             var copy = UnityEngine.Object.Instantiate(_sample.gameObject, parent, false);
             copy.name = title;
             var rect = copy.GetComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = new Vector2(.5f, 1f);
             rect.pivot = new Vector2(.5f, 1f);
-            rect.anchoredPosition = new Vector2(0, y);
-            rect.sizeDelta = new Vector2(520, 42);
+            rect.anchoredPosition = new Vector2(x, y);
+            rect.sizeDelta = new Vector2(width, 42);
             var button = copy.GetComponent<Button>();
             button.onClick = new Button.ButtonClickedEvent();
             button.onClick.AddListener(() => callback());
