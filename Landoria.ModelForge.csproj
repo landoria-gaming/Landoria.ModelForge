@@ -21,6 +21,7 @@
   <ItemGroup>
     <Reference Include="System" /><Reference Include="System.Core" />
     <Reference Include="BepInEx"><HintPath>$(BepInExPath)\core\BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepInExPath)\core\0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_valheim"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_valheim.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_utils"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_utils.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.dll</HintPath><Private>false</Private></Reference>
@@ -37,7 +38,8 @@
     <Reference Include="System.Memory"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\System.Memory.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Plugin.cs" /><Compile Include="Preference.cs" /><Compile Include="Shortcut.cs" />
+    <Compile Include="Plugin.cs" /><Compile Include="CursorPatch.cs" />
+    <Compile Include="Preference.cs" /><Compile Include="Shortcut.cs" />
     <Compile Include="ForgeWindow.cs" /><Compile Include="ForgeUiFactory.cs" />
     <Compile Include="ForgeDropdown.cs" /><Compile Include="ForgeSession.cs" />
     <Compile Include="GlbWriter.cs" /><Compile Include="GlbReader.cs" /><Compile Include="PreviewCapture.cs" />

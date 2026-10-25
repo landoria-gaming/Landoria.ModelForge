@@ -22,7 +22,7 @@ namespace Landoria.ModelForge
         private Button _import;
         private Button _erase;
         private CursorLockMode _previousLock;
-        private bool _previousVisible;
+        private bool _previousRequested;
         private string[] _files = Array.Empty<string>();
         private int _selected;
         internal bool IsOpen => _root != null && _root.activeSelf;
@@ -40,8 +40,8 @@ namespace Landoria.ModelForge
             if (IsOpen) { Close(); return; }
             if (!EnsureCreated()) { return; }
             _session.CaptureTarget();
-            _previousLock = Cursor.lockState;
-            _previousVisible = Cursor.visible;
+            _previousLock = ZCursor.LockState;
+            _previousRequested = ZCursor.IsRequested;
             Refresh();
             _root.SetActive(true);
             UpdateCursor();
@@ -53,16 +53,17 @@ namespace Landoria.ModelForge
             if (!IsOpen) { return; }
             _root.SetActive(false);
             _dropdown.Hide();
-            Cursor.lockState = _previousLock;
-            Cursor.visible = _previousVisible;
+            ZCursor.LockState = _previousLock;
+            if (_previousRequested) { ZCursor.Show(); }
+            else { ZCursor.Hide(); }
         }
 
         // Keeps UI input separate from Valheim's mouse controls.
         internal void UpdateCursor()
         {
             if (!IsOpen) { return; }
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            ZCursor.LockState = CursorLockMode.None;
+            ZCursor.Show();
             ZInput.IgnoreMouseInputForFrames(2);
             if (Input.GetKeyDown(KeyCode.Escape)) { Close(); }
         }
