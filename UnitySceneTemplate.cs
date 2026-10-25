@@ -28,6 +28,7 @@ internal static class ModelForgeSceneBuilder
             var modelPath = file.Replace('\\', '/');
             var scenePath = sceneFolder + ""/"" + Path.GetFileNameWithoutExtension(file) + "".unity"";
             if (File.Exists(scenePath)) { continue; }
+            AssetDatabase.ImportAsset(modelPath, ImportAssetOptions.ForceUpdate);
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
             if (prefab == null) { continue; }
             BuildScene(prefab, scenePath);
@@ -107,7 +108,9 @@ internal static class ModelForgeSceneBuilder
 ";
         internal const string Manifest = @"{
   ""dependencies"": {
-    ""com.unity.cloud.gltfast"": ""https://github.com/Unity-Technologies/com.unity.cloud.gltfast.git?path=/Packages/com.unity.cloud.gltfast""
+    ""com.unity.cloud.gltfast"": ""https://github.com/Unity-Technologies/com.unity.cloud.gltfast.git?path=/Packages/com.unity.cloud.gltfast"",
+    ""com.unity.modules.imageconversion"": ""1.0.0"",
+    ""com.unity.modules.unitywebrequesttexture"": ""1.0.0""
   }
 }
 ";
