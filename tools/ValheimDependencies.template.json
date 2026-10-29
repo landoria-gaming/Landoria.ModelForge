@@ -1,0 +1,312 @@
+﻿{
+    "gameData":  "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Valheim\\valheim_Data",
+    "unityVersion":  "6000.0.75f1",
+    "managedHardLinks":  [
+                             "0Harmony.dll",
+                             "Assembly-CSharp.dll",
+                             "assembly_googleanalytics.dll",
+                             "assembly_guiutils.dll",
+                             "assembly_lux.dll",
+                             "assembly_postprocessing.dll",
+                             "assembly_simplemeshcombine.dll",
+                             "assembly_sunshafts.dll",
+                             "assembly_utils.dll",
+                             "assembly_valheim.dll",
+                             "Autodesk.Fbx.BuildTestAssets.dll",
+                             "Autodesk.Fbx.dll",
+                             "com.rlabrecque.steamworks.net.dll",
+                             "com.unity.switch2.graphicsscalingkit.dll",
+                             "gui_framework.dll",
+                             "MagicaClothV2.dll",
+                             "Mono.Cecil.dll",
+                             "Mono.Cecil.Mdb.dll",
+                             "Mono.Cecil.Pdb.dll",
+                             "Mono.Cecil.Rocks.dll",
+                             "Mono.Security.dll",
+                             "MonoMod.RuntimeDetour.dll",
+                             "MonoMod.Utils.dll",
+                             "Newtonsoft.Json.dll",
+                             "PlayFab.dll",
+                             "PlayFabParty.dll",
+                             "SharpConfig.dll",
+                             "SingularityGroup.HotReload.Runtime.Public.dll",
+                             "SoftReferenceableAssets.dll",
+                             "Splatform.dll",
+                             "Splatform.Steam.dll",
+                             "Unity.AI.Navigation.dll",
+                             "Unity.Burst.dll",
+                             "Unity.Burst.Unsafe.dll",
+                             "Unity.Collections.dll",
+                             "Unity.Collections.LowLevel.ILSupport.dll",
+                             "Unity.Formats.Fbx.Runtime.dll",
+                             "Unity.InputSystem.dll",
+                             "Unity.InputSystem.ForUI.dll",
+                             "Unity.Mathematics.dll",
+                             "Unity.MemoryProfiler.dll",
+                             "Unity.Profiling.Core.dll",
+                             "Unity.ScriptableBuildPipeline.dll",
+                             "Unity.TextMeshPro.dll",
+                             "Unity.Timeline.dll",
+                             "UnityEngine.SpatialTracking.dll",
+                             "UnityEngine.UI.dll",
+                             "UnityEngine.XR.LegacyInputHelpers.dll"
+                         ],
+    "nativeHardLinks":  [
+                            "libonigwrap.dll",
+                            "lib_burst_generated.dll",
+                            "Microsoft.Xbox.Services.141.GDK.C.Thunks.dll",
+                            "Party.dll",
+                            "PartyWin32.dll",
+                            "PartyXboxLive.dll",
+                            "PartyXboxLiveWin32.dll",
+                            "steam_api64.dll",
+                            "XCurl.dll",
+                            "XGamingRuntimeThunks.dll"
+                        ],
+    "compiledShaders":  [
+                            {
+                                "asset":  "Assets/3rd party/Lux Lit Particles/Shaders/Lux Lit Particles Bumped.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Player.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/InteriorSide.shader",
+                                "bundle":  "f126269"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/BuiltInOverrides/Particle Standard Unlit.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Heightmap.shader",
+                                "bundle":  "b7b69eaf"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/AlphaParticle.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/ui_blur.shader",
+                                "bundle":  "d59cfac"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/FlowOpaque.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Skybox-Procedural_custm.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Lighting.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Trilinearmap.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Distortion.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/FallenWarrior.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/WeaponGlow.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/ShadowBlob.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Blob.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/mapshader.shader",
+                                "bundle":  "d59cfac"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/WaterMask.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/BlitCameraDepth.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Tar.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Clouds.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/LavaUI.shader",
+                                "bundle":  "d59cfac"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/BeaconBeam.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/GuiScroll.shader",
+                                "bundle":  "b8689a71"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/UIHeatDistortion.shader",
+                                "bundle":  "b8689a71"
+                            },
+                            {
+                                "asset":  "Assets/3rd party/TextMesh Pro/Shaders/TMP_SDF.shader",
+                                "bundle":  "8d5dbad8"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/BuiltInOverrides/Particle Standard Surface.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/SnowMesh.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Water.shader",
+                                "bundle":  "eb7a4308"
+                            },
+                            {
+                                "asset":  "Assets/3rd party/Lux Lit Particles/Shaders/Lux Lit Particles Tess Bumped.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/StandardTwosided.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/ParticleGradientMapped_Unlit.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/DepthWrite.shader",
+                                "bundle":  "d59cfac"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Rug.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Vegetation.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/LitGui.shader",
+                                "bundle":  "8d5dbad8"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Yggdrasil_root.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/StaticRock.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Grass.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/UI/shader/AntiAliasedCircle.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Decal.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/UI/shader/RadialSegmentShader.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/3rd party/SunShafts/Effects/ImageEffects/Shaders/_DepthOfField/DepthOfFieldScatter.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/MeshFlipbook.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Yggdrasil.shader",
+                                "bundle":  "d59cfac"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/ParticleDecal.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Flow.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/WaterBottom.shader",
+                                "bundle":  "d59cfac"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Bonemass.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/3rd party/SunShafts/Effects/ImageEffects/Shaders/SunShaftsComposite.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/LitParticles.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/3rd party/SunShafts/Effects/ImageEffects/Shaders/_DepthOfField/DepthOfFieldDX11.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/icon.shader",
+                                "bundle":  "d59cfac"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Invis.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/SkyObject.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/ParticleUnlit.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/UI/shader/RadialCutoutShader.shader",
+                                "bundle":  "d59cfac"
+                            },
+                            {
+                                "asset":  "Assets/3rd party/SunShafts/Effects/ImageEffects/Shaders/SimpleClear.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Piece.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/3rd party/TextMesh Pro/Shaders/TMP_SDF-Surface.shader",
+                                "bundle":  "c4210710"
+                            },
+                            {
+                                "asset":  "Assets/Shaders/Creature.shader",
+                                "bundle":  "c4210710"
+                            }
+                        ]
+}

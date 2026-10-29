@@ -40,7 +40,7 @@ namespace Landoria.ModelForge
         }
 
         // Excludes lower-detail LOD renderers from the exported model.
-        private static bool IsFirstLod(MeshRenderer renderer)
+        internal static bool IsFirstLod(MeshRenderer renderer)
         {
             var group = renderer.GetComponentInParent<LODGroup>();
             if (group == null) { return true; }
@@ -67,9 +67,13 @@ namespace Landoria.ModelForge
             var positions = new List<float>();
             var normals = new List<float>();
             var uvs = new List<float>();
+            var uv2s = new List<float>();
+            var colors = new List<float>();
             var vertices = mesh.vertices;
             var sourceNormals = mesh.normals;
             var sourceUvs = mesh.uv;
+            var sourceUv2s = mesh.uv2;
+            var sourceColors = mesh.colors;
             foreach (var vertex in vertices)
             {
                 var point = root.InverseTransformPoint(filter.transform.TransformPoint(vertex));
@@ -84,9 +88,20 @@ namespace Landoria.ModelForge
             {
                 uvs.Add(uv.x); uvs.Add(1f - uv.y);
             }
+            foreach (var uv in sourceUv2s)
+            {
+                uv2s.Add(uv.x); uv2s.Add(1f - uv.y);
+            }
+            foreach (var color in sourceColors)
+            {
+                colors.Add(color.r); colors.Add(color.g);
+                colors.Add(color.b); colors.Add(color.a);
+            }
             var positionId = AddFloats(positions, "VEC3", true);
             var normalId = sourceNormals.Length == vertices.Length ? AddFloats(normals, "VEC3", false) : -1;
             var uvId = sourceUvs.Length == vertices.Length ? AddFloats(uvs, "VEC2", false) : -1;
+            var uv2Id = sourceUv2s.Length == vertices.Length ? AddFloats(uv2s, "VEC2", false) : -1;
+            var colorId = sourceColors.Length == vertices.Length ? AddFloats(colors, "VEC4", false) : -1;
             var primitives = new JArray();
             for (var sub = 0; sub < mesh.subMeshCount; sub++)
             {
@@ -99,6 +114,8 @@ namespace Landoria.ModelForge
                 var attributes = new JObject { ["POSITION"] = positionId };
                 if (normalId >= 0) { attributes["NORMAL"] = normalId; }
                 if (uvId >= 0) { attributes["TEXCOORD_0"] = uvId; }
+                if (uv2Id >= 0) { attributes["TEXCOORD_1"] = uv2Id; }
+                if (colorId >= 0) { attributes["COLOR_0"] = colorId; }
                 var primitive = new JObject { ["attributes"] = attributes, ["indices"] = AddIndices(flipped) };
                 var materials = renderer.sharedMaterials;
                 if (sub < materials.Length && materials[sub] != null)
@@ -125,7 +142,7 @@ namespace Landoria.ModelForge
         {
             var bytes = new byte[values.Count * 4];
             Buffer.BlockCopy(values.ToArray(), 0, bytes, 0, bytes.Length);
-            var width = type == "VEC3" ? 3 : 2;
+            var width = type == "VEC4" ? 4 : type == "VEC3" ? 3 : 2;
             var accessor = new JObject { ["bufferView"] = AddView(bytes), ["componentType"] = 5126,
                 ["count"] = values.Count / width, ["type"] = type };
             if (bounds && values.Count > 0)
@@ -161,15 +178,23 @@ namespace Landoria.ModelForge
             var color = material.HasProperty("_Color") ? material.color : Color.white;
             var pbr = new JObject { ["baseColorFactor"] = new JArray(color.r, color.g, color.b, color.a),
                 ["metallicFactor"] = 0, ["roughnessFactor"] = 1 };
-            var texture = material.mainTexture;
+            var texture = material.HasProperty("_MainTex")
+                ? material.GetTexture("_MainTex") : null;
             if (texture != null)
             {
-                var png = TextureBytes(texture);
-                var imageId = _images.Count;
-                _images.Add(new JObject { ["bufferView"] = AddView(png), ["mimeType"] = "image/png" });
-                var textureId = _textures.Count;
-                _textures.Add(new JObject { ["source"] = imageId });
-                pbr["baseColorTexture"] = new JObject { ["index"] = textureId };
+                try
+                {
+                    var png = TextureBytes(texture);
+                    var imageId = _images.Count;
+                    _images.Add(new JObject { ["bufferView"] = AddView(png), ["mimeType"] = "image/png" });
+                    var textureId = _textures.Count;
+                    _textures.Add(new JObject { ["source"] = imageId });
+                    pbr["baseColorTexture"] = new JObject { ["index"] = textureId };
+                }
+                catch (Exception error)
+                {
+                    Debug.LogWarning("ModelForge texture skipped: " + error.Message);
+                }
             }
             id = _materials.Count;
             _materials.Add(new JObject { ["name"] = material.name, ["pbrMetallicRoughness"] = pbr,

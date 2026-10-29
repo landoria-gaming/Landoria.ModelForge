@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Reflection;
+using Newtonsoft.Json.Linq;
 
 namespace Landoria.ModelForge
 {
@@ -10,9 +10,10 @@ namespace Landoria.ModelForge
         private const string ProjectName = "UnityProject";
 
         // Adds the model and the editor scene builder to the working folder.
-        internal static string Write(string glbPath, string gameDataPath)
+        internal static string Write(string glbPath, string gameDataPath,
+            bool buildScene = true, string workingFolder = null)
         {
-            var project = Path.Combine(Path.GetDirectoryName(glbPath), ProjectName);
+            var project = Path.Combine(workingFolder ?? Path.GetDirectoryName(glbPath), ProjectName);
             var models = Path.Combine(project, "Assets", "Models");
             var editor = Path.Combine(project, "Assets", "Editor");
             Directory.CreateDirectory(models);
@@ -21,11 +22,14 @@ namespace Landoria.ModelForge
             Directory.CreateDirectory(Path.Combine(project, "Packages"));
             Directory.CreateDirectory(Path.Combine(project, "ProjectSettings"));
             var modelName = Path.GetFileNameWithoutExtension(glbPath);
-            File.Copy(glbPath, Path.Combine(models, Path.GetFileName(glbPath)), true);
+            var targetModel = Path.Combine(models, Path.GetFileName(glbPath));
+            if (!SamePath(glbPath, targetModel)) { File.Copy(glbPath, targetModel, true); }
             var metadata = Path.ChangeExtension(glbPath, ".valheim.json");
             if (File.Exists(metadata))
             {
-                File.Copy(metadata, Path.Combine(models, Path.GetFileName(metadata)), true);
+                var targetMetadata = Path.Combine(models, Path.GetFileName(metadata));
+                if (!SamePath(metadata, targetMetadata))
+                { File.Copy(metadata, targetMetadata, true); }
             }
             var sourceTextures = Path.Combine(Path.GetDirectoryName(glbPath), modelName + ".textures");
             if (Directory.Exists(sourceTextures))
@@ -34,41 +38,61 @@ namespace Landoria.ModelForge
                 Directory.CreateDirectory(targetTextures);
                 foreach (var texture in Directory.GetFiles(sourceTextures, "*.png"))
                 {
-                    File.Copy(texture, Path.Combine(targetTextures, Path.GetFileName(texture)), true);
+                    var targetTexture = Path.Combine(targetTextures, Path.GetFileName(texture));
+                    if (!SamePath(texture, targetTexture))
+                    { File.Copy(texture, targetTexture, true); }
                 }
             }
-            File.WriteAllText(Path.Combine(models, modelName + ".build"), "Build scene");
+            if (buildScene)
+            {
+                File.WriteAllText(Path.Combine(models, modelName + ".build"), "Build scene");
+            }
             File.WriteAllText(Path.Combine(editor, "ModelForgeSceneBuilder.cs"),
                 UnitySceneTemplate.SceneBuilder);
+            File.WriteAllText(Path.Combine(project, "Assets", "ModelForgePreviewController.cs"),
+                UnityPreviewTemplate.Controller);
+            File.WriteAllText(Path.Combine(project, "Assets", "ModelForgeWindPreview.cs"),
+                UnityPreviewTemplate.Wind);
+            File.WriteAllText(Path.Combine(project, "Assets", "ModelForgeAmbientActor.cs"),
+                UnityPreviewTemplate.Ambient);
+            File.WriteAllText(Path.Combine(project, "Assets", "ModelForgeRuntimeAnimator.cs"),
+                UnityPreviewTemplate.Animation);
             File.WriteAllText(Path.Combine(project, "ProjectSettings", "ModelForgeGameData.txt"),
                 gameDataPath);
             WritePostProcessing(project, gameDataPath);
             WriteOnce(Path.Combine(project, "Packages", "manifest.json"), UnitySceneTemplate.Manifest);
+            EnsureUnityModules(Path.Combine(project, "Packages", "manifest.json"));
             WriteOnce(Path.Combine(project, "ProjectSettings", "ProjectVersion.txt"),
                 UnitySceneTemplate.ProjectVersion);
             return project;
+        }
+
+        private static void EnsureUnityModules(string path)
+        {
+            var manifest = JObject.Parse(File.ReadAllText(path));
+            var dependencies = (JObject)manifest["dependencies"];
+            foreach (var module in new[] { "animation", "audio", "physics", "assetbundle" })
+            {
+                var name = "com.unity.modules." + module;
+                if (dependencies[name] == null) { dependencies[name] = "1.0.0"; }
+            }
+            File.WriteAllText(path, manifest.ToString());
+        }
+
+        private static bool SamePath(string left, string right)
+        {
+            return string.Equals(Path.GetFullPath(left), Path.GetFullPath(right),
+                StringComparison.OrdinalIgnoreCase);
         }
 
         // Supplies Valheim's post-processing runtime and the matching open-source shaders.
         private static void WritePostProcessing(string project, string gameDataPath)
         {
             var plugins = Path.Combine(project, "Assets", "Plugins");
-            var shaders = Path.Combine(project, "Assets", "Resources", "Shaders");
             Directory.CreateDirectory(plugins);
-            Directory.CreateDirectory(shaders);
             var runtime = Path.Combine(gameDataPath, "Managed", "assembly_postprocessing.dll");
             File.Copy(runtime, Path.Combine(plugins, "assembly_postprocessing.dll"), true);
-            var assembly = Assembly.GetExecutingAssembly();
-            const string prefix = "Landoria.ModelForge.PostProcessingResources.Shaders.";
-            foreach (var name in assembly.GetManifestResourceNames())
-            {
-                if (!name.StartsWith(prefix, StringComparison.Ordinal)) { continue; }
-                using (var input = assembly.GetManifestResourceStream(name))
-                using (var output = File.Create(Path.Combine(shaders, name.Substring(prefix.Length))))
-                {
-                    input.CopyTo(output);
-                }
-            }
+            UnityPostProcessingSource.CopyToProject(project);
         }
 
         // Preserves changes made later inside the generated Unity project.

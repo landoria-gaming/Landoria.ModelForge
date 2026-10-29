@@ -59,6 +59,12 @@ namespace Landoria.ModelForge
                 "; open it to build the scene and preview.";
         }
 
+        // Exports loaded terrain, props, and instanced clutter near the player.
+        internal string CaptureArea()
+        {
+            return SceneCapture.Export(Folder, Preference.CaptureRadius);
+        }
+
         // Loads an imported model as a movable local preview.
         internal string BeginPlacement(string path)
         {

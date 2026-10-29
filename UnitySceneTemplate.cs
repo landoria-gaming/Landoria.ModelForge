@@ -5,7 +5,9 @@ namespace Landoria.ModelForge
     {
         internal const string SceneBuilder = @"using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -47,6 +49,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         public string name;
         public string shader;
         public FloatData[] floats;
+        public IntData[] integers;
         public ColorData[] colors;
         public VectorData[] vectors;
         public TextureData[] textures;
@@ -54,30 +57,44 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
     }
 
     [System.Serializable] private sealed class FloatData { public string name; public float value; }
+    [System.Serializable] private sealed class IntData { public string name; public int value; }
     [System.Serializable] private sealed class ColorData { public string name; public Color value; }
     [System.Serializable] private sealed class VectorData { public string name; public Vector4 value; }
-    [System.Serializable] private sealed class TextureData { public string name; public string file; }
+    [System.Serializable] private sealed class TextureData
+    {
+        public string name;
+        public string file;
+        public bool hasSampler;
+        public int filterMode;
+        public bool mipmaps;
+        public int anisoLevel;
+        public float mipMapBias;
+        public int wrapMode;
+        public Vector2 scale;
+        public Vector2 offset;
+    }
 
     static ModelForgeSceneBuilder()
     {
         EditorApplication.delayCall += BuildMissingScenes;
         EditorSceneManager.sceneOpened += OnSceneOpened;
         EditorSceneManager.sceneSaving += OnSceneSaving;
-        EditorSceneManager.sceneSaved += OnSceneSaved;
         EditorApplication.delayCall += RefreshOpenScenes;
+        EditorApplication.playModeStateChanged += OnPlayModeChanged;
     }
 
     private static void RefreshOpenScenes()
     {
         for (var i = 0; i < SceneManager.sceneCount; i++)
         {
-            ApplyLiveShaders(SceneManager.GetSceneAt(i));
+            if (EditorApplication.isPlaying)
+            { ApplyLiveShaders(SceneManager.GetSceneAt(i)); }
         }
     }
 
     private static void OnSceneOpened(Scene scene, OpenSceneMode mode)
     {
-        ApplyLiveShaders(scene);
+        if (EditorApplication.isPlaying) { ApplyLiveShaders(scene); }
     }
 
     private static void OnSceneSaving(Scene scene, string path)
@@ -85,9 +102,10 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         RestoreStableMaterials(scene);
     }
 
-    private static void OnSceneSaved(Scene scene)
+    private static void OnPlayModeChanged(PlayModeStateChange state)
     {
-        ApplyLiveShaders(scene);
+        if (state != PlayModeStateChange.EnteredPlayMode) { return; }
+        RefreshOpenScenes();
     }
 
     private static void OnPostprocessAllAssets(string[] imported, string[] deleted,
@@ -103,25 +121,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         }
     }
 
-    [MenuItem(""ModelForge/Build missing scenes"")]
-    public static void BuildMissingScenes()
-    {
-        const string modelFolder = ""Assets/Models"";
-        const string sceneFolder = ""Assets/Scenes"";
-        if (!Directory.Exists(modelFolder)) { return; }
-        foreach (var file in Directory.GetFiles(modelFolder, ""*.glb""))
-        {
-            var modelPath = file.Replace('\\', '/');
-            var scenePath = sceneFolder + ""/"" + Path.GetFileNameWithoutExtension(file) + "".unity"";
-            var requestPath = Path.ChangeExtension(modelPath, "".build"");
-            if (File.Exists(scenePath) && !File.Exists(requestPath)) { continue; }
-            AssetDatabase.ImportAsset(modelPath, ImportAssetOptions.ForceUpdate);
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
-            if (prefab == null) { continue; }
-            BuildScene(prefab, modelPath, scenePath);
-            if (File.Exists(requestPath)) { File.Delete(requestPath); }
-        }
-    }
+" + UnityAreaTemplate.Code + @"
 
     private static void BuildScene(GameObject prefab, string modelPath, string path)
     {
@@ -160,9 +160,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         SceneManager.MoveGameObjectToScene(lightObject, scene);
         var light = lightObject.AddComponent<Light>();
         light.type = LightType.Directional;
-        // Valheim's scene lighting is too bright when rebuilt as one flat preview light.
-        const float previewLightScale = .35f;
-        light.intensity = (settings != null ? settings.sunIntensity : 1.2f) * previewLightScale;
+        light.intensity = settings != null ? settings.sunIntensity : 1.2f;
         light.color = settings != null ? settings.sunColor : Color.white;
         light.shadows = settings != null && settings.sunShadows
             ? LightShadows.Soft : LightShadows.None;
@@ -172,7 +170,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         if (settings != null)
         {
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = settings.ambient * previewLightScale;
+            RenderSettings.ambientLight = settings.ambient;
             RenderSettings.sun = light;
             RenderSettings.fog = settings.fog;
             RenderSettings.fogColor = settings.fogColor;
@@ -182,7 +180,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
             RenderSettings.fogEndDistance = settings.fogEnd;
         }
         EditorSceneManager.SaveScene(scene, path);
-        ApplyLiveShaders(scene);
+        if (EditorApplication.isPlaying) { ApplyLiveShaders(scene); }
         SaveJpeg(camera, Path.GetFileNameWithoutExtension(path));
         if (mode == NewSceneMode.Additive) { EditorSceneManager.CloseScene(scene, true); }
     }
@@ -252,6 +250,11 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
                 {
                     materials[i] = source;
                 }
+                else if (settings.materials != null && settings.materials.Length > 0)
+                {
+                    var index = Mathf.Min(i, settings.materials.Length - 1);
+                    resolved.TryGetValue(settings.materials[index].name, out materials[i]);
+                }
             }
             renderer.sharedMaterials = materials;
         }
@@ -259,6 +262,7 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
 
 " + UnityShaderTemplate.Code + @"    private static void RestoreProperties(Material material, MaterialData data, string modelPath)
     {
+        RestoreIntegers(material, data);
         if (data.floats != null)
         {
             foreach (var entry in data.floats)
@@ -294,22 +298,37 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         foreach (var entry in data.textures)
         {
             var path = folder + ""/"" + entry.file;
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) == null)
+            { AssetDatabase.ImportAsset(path); }
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
-            if (importer != null && (importer.filterMode != FilterMode.Point ||
-                importer.mipmapEnabled ||
-                importer.textureCompression != TextureImporterCompression.Uncompressed))
+            if (importer != null)
             {
-                importer.filterMode = FilterMode.Point;
-                importer.mipmapEnabled = false;
-                importer.textureCompression = TextureImporterCompression.Uncompressed;
-                importer.npotScale = TextureImporterNPOTScale.None;
-                importer.SaveAndReimport();
+                var filter = entry.hasSampler
+                    ? (FilterMode)entry.filterMode : FilterMode.Point;
+                var mipmaps = entry.hasSampler && entry.mipmaps;
+                if (importer.filterMode != filter || importer.mipmapEnabled != mipmaps ||
+                    importer.textureCompression != TextureImporterCompression.Uncompressed)
+                {
+                    importer.filterMode = filter;
+                    importer.mipmapEnabled = mipmaps;
+                    importer.anisoLevel = entry.hasSampler ? entry.anisoLevel : 1;
+                    importer.mipMapBias = entry.hasSampler ? entry.mipMapBias : 0f;
+                    importer.wrapMode = entry.hasSampler
+                        ? (TextureWrapMode)entry.wrapMode : TextureWrapMode.Repeat;
+                    importer.textureCompression = TextureImporterCompression.Uncompressed;
+                    importer.npotScale = TextureImporterNPOTScale.None;
+                    importer.SaveAndReimport();
+                }
             }
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             if (texture != null && material.HasProperty(entry.name))
             {
                 material.SetTexture(entry.name, texture);
+                if (entry.hasSampler)
+                {
+                    material.SetTextureScale(entry.name, entry.scale);
+                    material.SetTextureOffset(entry.name, entry.offset);
+                }
             }
         }
     }
@@ -354,12 +373,15 @@ internal sealed class ModelForgeSceneBuilder : AssetPostprocessor
         foreach (var renderer in renderers) { bounds.Encapsulate(renderer.bounds); }
         return bounds;
     }
-}
+" + UnityActorMaterialTemplate.Code + UnityAnimatedTemplate.Code + @"}
 ";
         internal const string Manifest = @"{
   ""dependencies"": {
     ""com.unity.cloud.gltfast"": ""https://github.com/Unity-Technologies/com.unity.cloud.gltfast.git?path=/Packages/com.unity.cloud.gltfast"",
     ""com.unity.modules.imageconversion"": ""1.0.0"",
+    ""com.unity.modules.animation"": ""1.0.0"",
+    ""com.unity.modules.audio"": ""1.0.0"",
+    ""com.unity.modules.physics"": ""1.0.0"",
     ""com.unity.modules.unitywebrequesttexture"": ""1.0.0""
   }
 }

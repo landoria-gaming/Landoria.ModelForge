@@ -11,7 +11,7 @@ namespace Landoria.ModelForge
     {
         private const string PluginGuid = "Landoria.ModelForge";
         private const string PluginName = "Landoria.ModelForge";
-        private const string PluginVersion = "1.0.0";
+        private const string PluginVersion = "1.0.1";
 
         private ForgeSession _session;
         private ForgeWindow _window;

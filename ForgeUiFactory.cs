@@ -45,12 +45,23 @@ namespace Landoria.ModelForge
             float width, float height, float size, TextAlignmentOptions alignment)
         {
             var rect = Rect(parent, "Text", new Vector2(x, y), new Vector2(width, height));
+            rect.gameObject.SetActive(false);
             var text = rect.gameObject.AddComponent<TextMeshProUGUI>();
-            if (_sampleText != null)
+            var fontSource = _sampleText;
+            if (fontSource == null || fontSource.font == null)
             {
-                text.font = _sampleText.font;
-                text.fontSharedMaterial = _sampleText.fontSharedMaterial;
-                text.color = _sampleText.color;
+                foreach (var candidate in Resources.FindObjectsOfTypeAll<TMP_Text>())
+                {
+                    if (candidate.font == null) { continue; }
+                    fontSource = candidate;
+                    break;
+                }
+            }
+            if (fontSource != null && fontSource.font != null)
+            {
+                text.font = fontSource.font;
+                text.fontSharedMaterial = fontSource.fontSharedMaterial;
+                text.color = fontSource.color;
             }
             else
             {
@@ -60,6 +71,7 @@ namespace Landoria.ModelForge
             text.alignment = alignment;
             text.text = value;
             text.raycastTarget = false;
+            rect.gameObject.SetActive(true);
             return text;
         }
 

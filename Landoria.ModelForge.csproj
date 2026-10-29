@@ -20,6 +20,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" /><Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" /><Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="BepInEx"><HintPath>$(BepInExPath)\core\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_valheim"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_valheim.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_utils"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_utils.dll</HintPath><Private>false</Private></Reference>
@@ -28,6 +29,7 @@
     <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.JSONSerializeModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.JSONSerializeModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.UI"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
@@ -42,13 +44,12 @@
     <Compile Include="Plugin.cs" /><Compile Include="NativePopupHost.cs" />
     <Compile Include="Preference.cs" /><Compile Include="Shortcut.cs" />
     <Compile Include="ForgeWindow.cs" /><Compile Include="ForgeUiFactory.cs" />
-    <Compile Include="ForgeDropdown.cs" /><Compile Include="ForgeSession.cs" /><Compile Include="UnitySceneExport.cs" /><Compile Include="UnitySceneTemplate.cs" /><Compile Include="UnityShaderTemplate.cs" /><Compile Include="UnityMaterialSnapshot.cs" />
+    <Compile Include="ForgeDropdown.cs" /><Compile Include="ForgeSession.cs" /><Compile Include="UnitySceneExport.cs" /><Compile Include="UnityPostProcessingSource.cs" /><Compile Include="UnitySceneTemplate.cs" /><Compile Include="UnityShaderTemplate.cs" /><Compile Include="UnityMaterialSnapshot.cs" />
     <Compile Include="GlbWriter.cs" /><Compile Include="GlbReader.cs" />
+    <Compile Include="SceneCapture.cs" /><Compile Include="UnityAreaTemplate.cs" /><Compile Include="UnityAnimatedTemplate.cs" /><Compile Include="UnityActorMaterialTemplate.cs" /><Compile Include="UnityPreviewTemplate.cs" /><Compile Include="UnityBatchBuild.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="PostProcessingResources\Shaders\*.*" />
-    <Content Include="PostProcessingResources\LICENSE" />
     <Content Include="icon.png" /><Content Include="LICENSE" /><Content Include="manifest.json" />
     <Content Include="README.md" /><Content Include="CHANGELOG.md" />
   </ItemGroup>

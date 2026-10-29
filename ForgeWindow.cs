@@ -20,12 +20,14 @@ namespace Landoria.ModelForge
         private TMP_Text _selection;
         private Button _export;
         private Button _unity;
+        private Button _areaUnity;
         private Button _import;
         private Button _erase;
         private CursorLockMode _previousLock;
         private bool _previousRequested;
         private string[] _files = Array.Empty<string>();
         private int _selected;
+        private string _lastBuildStatus;
         internal bool IsOpen => _host != null && _host.IsOpen;
 
         // Stores the model session and logger.
@@ -47,6 +49,7 @@ namespace Landoria.ModelForge
             _host = host;
             _ui = new ForgeUiFactory(sample);
             BuildContents(panel);
+            _lastBuildStatus = null;
             Refresh();
             UpdateCursor();
         }
@@ -69,6 +72,12 @@ namespace Landoria.ModelForge
             ZCursor.LockState = CursorLockMode.None;
             ZCursor.Show();
             ZInput.IgnoreMouseInputForFrames(2);
+            var build = UnityBatchBuild.Status;
+            if (build != null && build != _lastBuildStatus)
+            {
+                _status.text = build;
+                _lastBuildStatus = build;
+            }
             if (Input.GetKeyDown(KeyCode.Escape)) { Close(); }
         }
 
@@ -82,8 +91,11 @@ namespace Landoria.ModelForge
         private void BuildContents(RectTransform panel)
         {
             _targetName = _ui.Label(panel, "", 0, -78, 520, 28, 18, TextAlignmentOptions.Center);
-            _export = _ui.Button(panel, "Export GLB", -132, Export, -135, 250);
-            _unity = _ui.Button(panel, "Generate Unity scene", -132, GenerateUnityScene, 135, 250);
+            _export = _ui.Button(panel, "Export GLB", -132, Export, -175, 160);
+            _unity = _ui.Button(panel, "Unity from GLB", -132, GenerateUnityScene, 0, 160);
+            _areaUnity = _ui.Button(panel, "Area " +
+                Mathf.RoundToInt(Preference.CaptureRadius) + "m Unity",
+                -132, CaptureArea, 175, 160);
             _selection = _ui.Label(panel, "No GLB files", 0, -188, 440, 36, 20, TextAlignmentOptions.Center);
             _ui.Button(panel, "Choose model", -230, ToggleDropdown);
             _dropdown = new ForgeDropdown(_ui, panel, -267, SelectModel);
@@ -137,6 +149,13 @@ namespace Landoria.ModelForge
         {
             if (_files.Length == 0) { return; }
             Run(() => _session.GenerateUnityScene(_files[_selected]));
+        }
+
+        // Captures the loaded area around the player in Clear lighting.
+        private void CaptureArea()
+        {
+            Run(_session.CaptureArea);
+            Refresh();
         }
 
         // Starts a temporary placement of the chosen GLB.
